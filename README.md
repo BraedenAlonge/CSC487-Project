@@ -35,30 +35,54 @@ CSC487-Project/
 
 ## Setup Instructions
 
+### For Local Development
+
 ### 1. Install Dependencies
 
 ```bash
 pip install -r requirements.txt
 ```
 
+### For Google Colab (GPU Training)
+
+See **[COLAB_SETUP.md](COLAB_SETUP.md)** for detailed instructions on running training on Google Colab with GPU support.
+
+Quick start:
+1. Upload your code to Colab (or clone from GitHub)
+2. Install dependencies: `!pip install torch torchvision torchmetrics pyyaml matplotlib scipy tensorboard`
+3. Enable GPU: Runtime → Change runtime type → GPU
+4. Download dataset and update config paths
+5. Run: `!python train.py --config configs/colab.yaml`
+
+Or use the provided **[colab_notebook.ipynb](colab_notebook.ipynb)** notebook.
+
 ### 2. Prepare Dataset
 
 1. Download the "1000 Pokémon Dataset" from Kaggle: https://www.kaggle.com/datasets/noodulz/pokemon-dataset-1000/data
-2. Extract the dataset to a directory (e.g., `data/pokemon/`)
-3. Update the `train_dir` path in `configs/baseline.yaml` to point to your dataset directory
+2. Extract the dataset. The dataset comes with pre-split folders:
+   - Extract to `data/pokemon/` (or your preferred location)
+   - The dataset should contain `train/`, `val/`, and `test/` folders
+3. Update the paths in `configs/baseline.yaml` if you extracted to a different location
 
-The dataset should have the following structure:
+The dataset structure should look like:
 ```
 data/pokemon/
-├── pokemon1/
+├── train/          # Training images
 │   ├── image1.png
 │   ├── image2.png
 │   └── ...
-├── pokemon2/
+├── val/            # Validation images
 │   ├── image1.png
 │   └── ...
-└── ...
+├── test/           # Test images (for final evaluation)
+│   ├── image1.png
+│   └── ...
+├── dataset/        # Original dataset (if included)
+├── generate_splits # Python script (optional, splits already done)
+└── metadata.csv    # Dataset metadata (optional)
 ```
+
+**Note:** The dataset already has train/val/test splits, so you don't need to run `generate_splits` unless you want to recreate the splits.
 
 ### 3. Verify Installation
 

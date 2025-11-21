@@ -10,11 +10,11 @@ model:
 
 # Data configuration
 data:
-  train_dir: "data/pokemon"  # Path to training data directory
-  val_dir: null               # Path to validation data (null = split from train_dir)
-  test_dir: null              # Path to test data (null = use train_dir)
-  num_workers: 4              # Number of data loading workers
-  augment: false             # Whether to apply data augmentation
+  train_dir: "data/pokemon-dataset-1000/train"  # Path to training data directory
+  val_dir: "data/pokemon-dataset-1000/val"      # Path to validation data
+  test_dir: "data/pokemon-dataset-1000/test"    # Path to test data (for evaluation)
+  num_workers: 4                                # Number of data loading workers
+  augment: false                                # Whether to apply data augmentation
 
 # Training configuration
 training:
