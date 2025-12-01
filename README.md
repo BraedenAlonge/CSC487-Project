@@ -197,37 +197,6 @@ To ensure reproducibility:
 2. Use deterministic operations (set `deterministic: true` in config)
 3. Use the same dataset and preprocessing
 
-## Training Tips
-
-1. **Monitor training**: Use TensorBoard to monitor losses and metrics
-   ```bash
-   tensorboard --logdir logs
-   ```
-
-2. **Check for mode collapse**: If generated images look very similar, try:
-   - Lower learning rates
-   - Label smoothing
-   - Mini-batch discrimination (not implemented in baseline)
-
-3. **Training stability**: If training is unstable:
-   - Reduce learning rates
-   - Use gradient clipping
-   - Adjust label smoothing
-
-## Expected Results (Baseline)
-
-For the baseline model trained on ~5k-10k images:
-- **FID**: 50-100 (lower is better)
-- **IS**: 2-4 (higher is better)
-- Training time: ~2-4 hours on Google Colab T4 GPU
-
-## Troubleshooting
-
-1. **CUDA out of memory**: Reduce batch_size in config file
-2. **Dataset not found**: Check data paths in config file
-3. **Import errors**: Install all dependencies from requirements.txt
-4. **Slow training**: Reduce num_workers or disable deterministic mode
-
 ## Stage 2 Deliverables Checklist
 
 - [x] Complete PyTorch training pipeline
