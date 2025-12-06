@@ -20,24 +20,24 @@ data:
 training:
   seed: 42                   # Random seed for reproducibility
   deterministic: false       # Enable deterministic operations (slower)
-  batch_size: 128            # Batch size (increased for more stable gradients)
+  batch_size: 64             # Batch size (reduced from 128 - better for spectral norm stability)
   epochs: 200                # Number of training epochs
   lr_g: 0.0002               # Learning rate for generator
-  lr_d: 0.0001               # Learning rate for discriminator (TTUR: lower LR for D)
+  lr_d: 0.0002               # Learning rate for discriminator (equal LR works better with spectral norm)
   beta1: 0.5                 # Beta1 for Adam optimizer
   beta2: 0.999               # Beta2 for Adam optimizer
-  label_smoothing: 0.1       # Label smoothing
+  label_smoothing: 0.2       # Label smoothing (increased to stabilize discriminator)
   
   # Training stability options
-  d_steps_per_g_step: 1      # Number of discriminator updates per generator update (1 = balanced)
-  grad_clip_g: 10.0          # Gradient clipping for generator (omit to disable)
-  # grad_clip_d: 10.0        # Gradient clipping for discriminator (omit to disable)
+  d_steps_per_g_step: 2      # Number of discriminator updates per generator update (train D more to balance)
+  grad_clip_g: 5.0           # Gradient clipping for generator (reduced from 10.0 - less aggressive)
+  grad_clip_d: 5.0           # Gradient clipping for discriminator (added for stability)
   
   # Early stopping configuration
   early_stopping:
     enabled: true             # Enable early stopping based on FID
-    patience: 10             # Number of epochs to wait for improvement before stopping
-    min_delta: 0.0           # Minimum change to qualify as improvement
+    patience: 15              # Increased patience - give more time for improvement
+    min_delta: 1.0            # Minimum FID improvement to count (prevents stopping on noise)
   
   # Logging and checkpointing
   log_interval: 50           # Log every N batches
