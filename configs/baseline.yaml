@@ -23,29 +23,26 @@ training:
   batch_size: 64             # Batch size (reduced from 128 - better for spectral norm stability)
   epochs: 200                # Number of training epochs
   lr_g: 0.0002               # Learning rate for generator
-  lr_d: 0.0002               # Learning rate for discriminator (equal LR works better with spectral norm)
+  lr_d: 0.0001               # Learning rate for discriminator (reduced - D is too strong)
   beta1: 0.5                 # Beta1 for Adam optimizer
   beta2: 0.999               # Beta2 for Adam optimizer
   loss_type: lsgan           # Loss function: 'bce' or 'lsgan' (LSGAN often more stable)
-  label_smoothing: 0.1       # Label smoothing value (0.0 to disable)
+  label_smoothing: 0.2       # Label smoothing value (increased to weaken D)
   one_sided_label_smoothing: true  # Only smooth real labels (keep fake labels at 0) - more stable
   
   # Training stability options
-  d_steps_per_g_step: 2      # Number of discriminator updates per generator update (train D more to balance)
+  d_steps_per_g_step: 1      # Number of discriminator updates per generator update (reduced - D was too strong)
   grad_clip_g: 5.0           # Gradient clipping for generator (reduced from 10.0 - less aggressive)
-  grad_clip_d: 5.0           # Gradient clipping for discriminator (added for stability)
+  grad_clip_d: 10.0          # Gradient clipping for discriminator (increased to prevent D from becoming too strong)
   
   # Learning rate scheduler configuration
   lr_scheduler:
     enabled: true             # Enable learning rate decay
-    type: step                # Scheduler type: 'step', 'exponential', or 'reduce_on_plateau'
-    step_size: 50             # For 'step': decay every N epochs
-    gamma: 0.5                # Multiplicative factor for LR decay
-    # For 'reduce_on_plateau':
-    # mode: min                # 'min' (reduce when metric stops decreasing) or 'max'
-    # factor: 0.5              # Factor to reduce LR by
-    # patience: 10             # Number of epochs to wait before reducing LR
-    # min_lr: 1e-6             # Minimum learning rate
+    type: reduce_on_plateau     # Adaptive LR reduction based on FID plateau
+    mode: min                 # 'min' (reduce when FID stops decreasing) or 'max'
+    factor: 0.5               # Factor to reduce LR by
+    patience: 10              # Number of epochs to wait before reducing LR
+    min_lr: 1e-6              # Minimum learning rate
   
   # Early stopping configuration
   early_stopping:
