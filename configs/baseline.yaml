@@ -1,63 +1,64 @@
-# Stage 3: Final Model Configuration
+# Simplified Configuration - Less is More
+# Philosophy: Smaller model, cleaner training, let the data speak
 
-# Model architecture
+# Model architecture - SMALLER
 model:
-  nz: 100              # Size of input noise vector
-  ngf: 512             # Number of generator features in first layer
-  ndf: 64              # Number of discriminator features in first layer
-  nc: 3                # Number of channels (RGB)
-  use_spectral_norm: true  # Apply spectral normalization to discriminator (stabilizes training)
+  nz: 100
+  ngf: 256              # REDUCED from 512 - halves generator size (~900K params vs 3.6M)
+  ndf: 64               # Keep discriminator the same
+  nc: 3
+  use_spectral_norm: true
 
 # Data configuration
 data:
-  train_dir: "data/pokemon-dataset-1000/train"  # Path to training data directory
-  val_dir: "data/pokemon-dataset-1000/val"      # Path to validation data
-  test_dir: "data/pokemon-dataset-1000/test"    # Path to test data (for evaluation)
-  num_workers: 4                                # Number of data loading workers
-  augment: true                                 # Whether to apply data augmentation (horizontal flips, rotations, color jitter)
+  train_dir: "data/pokemon-dataset-1000/train"
+  val_dir: "data/pokemon-dataset-1000/val"
+  test_dir: "data/pokemon-dataset-1000/test"
+  num_workers: 4
+  augment: true         # Keep augmentation - it helps with limited data
 
-# Training configuration
+# Training configuration - SIMPLER
 training:
-  seed: 42                   # Random seed for reproducibility
-  deterministic: false       # Enable deterministic operations (slower)
-  batch_size: 256             # Batch size (reduced from 128 - better for spectral norm stability)
-  epochs: 200                # Number of training epochs
-  lr_g: 0.0002               # Learning rate for generator
-  lr_d: 0.00005               # Learning rate for discriminator (reduced - D is too strong)
-  beta1: 0.5                 # Beta1 for Adam optimizer
-  beta2: 0.999               # Beta2 for Adam optimizer
-  loss_type: lsgan           # Loss function: 'bce' or 'lsgan' (LSGAN often more stable)
-  label_smoothing: 0.25       # Label smoothing value (increased to weaken D)
-  one_sided_label_smoothing: true  # Only smooth real labels (keep fake labels at 0) - more stable
+  seed: 42
+  deterministic: false
+  batch_size: 64        # Keep at 64 - stable
+  epochs: 300           # More epochs since simpler model may need more time
   
-  # Training stability options
-  d_steps_per_g_step: 1      # Number of discriminator updates per generator update (reduced - D was too strong)
-  grad_clip_g: 5.0           # Gradient clipping for generator (reduced from 10.0 - less aggressive)
-  grad_clip_d: 10.0          # Gradient clipping for discriminator (increased to prevent D from becoming too strong)
+  # Slightly lower, more balanced learning rates
+  lr_g: 0.0002
+  lr_d: 0.0002          # SAME as G - simpler, often works fine
+  beta1: 0.5
+  beta2: 0.999
   
-  # Learning rate scheduler configuration
+  loss_type: lsgan      # Keep LSGAN - it's working fine
+  label_smoothing: 0.1  # REDUCED from 0.2 - less smoothing needed
+  one_sided_label_smoothing: true
+  
+  # REMOVE complex tricks
+  d_steps_per_g_step: 1
+  #grad_clip_g: 10.0     # DISABLED - let gradients flow naturally  
+  #grad_clip_d: 10.0     # DISABLED
+  
+  # Simpler scheduler
   lr_scheduler:
-    enabled: true             # Enable learning rate decay
-    type: reduce_on_plateau     # Adaptive LR reduction based on FID plateau
-    mode: min                 # 'min' (reduce when FID stops decreasing) or 'max'
-    factor: 0.5               # Factor to reduce LR by
-    patience: 10              # Number of epochs to wait before reducing LR
-    min_lr: 0.000001          # Minimum learning rate (1e-6 written as decimal)
+    enabled: true
+    type: step           # Simple step decay instead of plateau
+    step_size: 50        # Decay every 50 epochs
+    gamma: 0.5           # Halve LR
   
-  # Early stopping configuration
+  # Early stopping - more patient
   early_stopping:
-    enabled: true             # Enable early stopping based on FID
-    patience: 15              # Increased patience - give more time for improvemeznt
-    min_delta: 1.0            # Minimum FID improvement to count (prevents stopping on noise)
+    enabled: true
+    patience: 30         # Give it time
+    min_delta: 1.0
   
-  # Logging and checkpointing
-  log_interval: 50           # Log every N batches
-  save_interval: 5           # Save sample images every N epochs
-  checkpoint_interval: 25    # Save checkpoint every N epochs
-  val_samples: 64            # Number of samples for validation visualization
+  # Logging
+  log_interval: 50
+  save_interval: 5
+  checkpoint_interval: 25
+  val_samples: 64
   
-  # Directories
-  checkpoint_dir: "checkpoints"
-  output_dir: "outputs"
-  log_dir: "logs"
+  checkpoint_dir: "checkpoints_simple"
+  output_dir: "outputs_simple"
+  log_dir: "logs_simple"
 
