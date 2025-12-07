@@ -42,7 +42,7 @@ training:
     mode: min                 # 'min' (reduce when FID stops decreasing) or 'max'
     factor: 0.5               # Factor to reduce LR by
     patience: 10              # Number of epochs to wait before reducing LR
-    min_lr: 1e-6              # Minimum learning rate
+    min_lr: 0.000001          # Minimum learning rate (1e-6 written as decimal)
   
   # Early stopping configuration
   early_stopping:

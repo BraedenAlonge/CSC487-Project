@@ -369,14 +369,14 @@ def main():
             mode = lr_scheduler_config.get('mode', 'min')
             factor = lr_scheduler_config.get('factor', 0.5)
             patience = lr_scheduler_config.get('patience', 10)
-            min_lr = lr_scheduler_config.get('min_lr', 1e-6)
+            min_lr = lr_scheduler_config.get('min_lr', 0.000001)
             schedulerG = optim.lr_scheduler.ReduceLROnPlateau(
                 optimizerG, mode=mode, factor=factor, patience=patience, min_lr=min_lr
             )
             schedulerD = optim.lr_scheduler.ReduceLROnPlateau(
                 optimizerD, mode=mode, factor=factor, patience=patience, min_lr=min_lr
             )
-            print(f"Using ReduceLROnPlateau scheduler: mode={mode}, factor={factor}, patience={patience}")
+            print(f"Using ReduceLROnPlateau scheduler: mode={mode}, factor={factor}, patience={patience}, min_lr={min_lr}")
         
         else:
             print(f"Unknown scheduler type: {scheduler_type}, skipping LR scheduling")
