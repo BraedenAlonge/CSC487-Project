@@ -21,7 +21,7 @@ data:
 training:
   seed: 42
   deterministic: false
-  batch_size: 64
+  batch_size: 128
   epochs: 300
   
   # Asymmetric learning rates - discriminator learns faster
@@ -31,9 +31,9 @@ training:
   beta2: 0.999
   
   # LSGAN loss with minimal smoothing
-  loss_type: lsgan
+  loss_type: bce
   label_smoothing: 0.05   # Reduced from 0.1
-  one_sided_label_smoothing: true
+  one_sided_label_smoothing: false
   
   # Training dynamics
   d_steps_per_g_step: 1
