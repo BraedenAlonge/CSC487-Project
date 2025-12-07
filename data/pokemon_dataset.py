@@ -27,11 +27,13 @@ class PokemonDataset(Dataset):
         
         # Add augmentation if requested
         if augment:
+            # Hardcoded augmentation settings
             aug_transforms = [
                 transforms.RandomHorizontalFlip(p=0.5),
-                transforms.RandomRotation(degrees=5),  # Small rotations (±5 degrees)
-                transforms.ColorJitter(brightness=0.1, contrast=0.1, saturation=0.1, hue=0.05)
+                transforms.RandomRotation(degrees=5),  # Small rotations
+                transforms.RandomAffine(degrees=0, translate=(0.05, 0.05), scale=(0.95, 1.05))
             ]
+            
             self.transform = transforms.Compose(aug_transforms + base_transforms)
         else:
             self.transform = transforms.Compose(base_transforms)

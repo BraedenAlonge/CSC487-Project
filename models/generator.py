@@ -2,40 +2,63 @@ import torch
 import torch.nn as nn
 
 class Generator(nn.Module):
-    def __init__(self, nz=100, ngf=512, nc=3):
+    def __init__(self, nz=100, ngf=512, nc=3, kernel_size=4, stride=2, padding=1, dropout=0.0):
         super(Generator, self).__init__()
         self.nz = nz
         self.ngf = ngf
         self.nc = nc
+        self.kernel_size = kernel_size
+        self.stride = stride
+        self.padding = padding
+        self.dropout = dropout
         
         # Linear layer: 100 -> 4×4×512
-        self.linear = nn.Sequential(
+        linear_layers = [
             nn.Linear(nz, 4 * 4 * ngf),
             nn.BatchNorm1d(4 * 4 * ngf),
             nn.ReLU(True)
-        )
+        ]
+        if dropout > 0:
+            linear_layers.append(nn.Dropout(dropout))
+        self.linear = nn.Sequential(*linear_layers)
         
         # Transpose convolution layers
-        self.main = nn.Sequential(
-            # TransposeConv2d: 4×4×512 → 8×8×256
-            nn.ConvTranspose2d(ngf, ngf // 2, kernel_size=4, stride=2, padding=1, bias=False),
-            nn.BatchNorm2d(ngf // 2),
-            nn.ReLU(True),
-            
-            # TransposeConv2d: 8×8×256 → 16×16×128
-            nn.ConvTranspose2d(ngf // 2, ngf // 4, kernel_size=4, stride=2, padding=1, bias=False),
-            nn.BatchNorm2d(ngf // 4),
-            nn.ReLU(True),
-            
-            # TransposeConv2d: 16×16×128 → 32×32×64
-            nn.ConvTranspose2d(ngf // 4, ngf // 8, kernel_size=4, stride=2, padding=1, bias=False),
-            nn.BatchNorm2d(ngf // 8),
-            nn.ReLU(True),
-            
-            # TransposeConv2d: 32×32×64 → 64×64×3
-            nn.ConvTranspose2d(ngf // 8, nc, kernel_size=4, stride=2, padding=1, bias=False),
-            nn.Tanh()  # Output values in [-1, 1]
+        main_layers = []
+        
+        # TransposeConv2d: 4×4×512 → 8×8×256
+        main_layers.append(
+            nn.ConvTranspose2d(ngf, ngf // 2, kernel_size=kernel_size, stride=stride, padding=padding, bias=False)
         )
+        main_layers.append(nn.BatchNorm2d(ngf // 2))
+        if dropout > 0:
+            main_layers.append(nn.Dropout2d(dropout))
+        main_layers.append(nn.ReLU(True))
+        
+        # TransposeConv2d: 8×8×256 → 16×16×128
+        main_layers.append(
+            nn.ConvTranspose2d(ngf // 2, ngf // 4, kernel_size=kernel_size, stride=stride, padding=padding, bias=False)
+        )
+        main_layers.append(nn.BatchNorm2d(ngf // 4))
+        if dropout > 0:
+            main_layers.append(nn.Dropout2d(dropout))
+        main_layers.append(nn.ReLU(True))
+        
+        # TransposeConv2d: 16×16×128 → 32×32×64
+        main_layers.append(
+            nn.ConvTranspose2d(ngf // 4, ngf // 8, kernel_size=kernel_size, stride=stride, padding=padding, bias=False)
+        )
+        main_layers.append(nn.BatchNorm2d(ngf // 8))
+        if dropout > 0:
+            main_layers.append(nn.Dropout2d(dropout))
+        main_layers.append(nn.ReLU(True))
+        
+        # TransposeConv2d: 32×32×64 → 64×64×3
+        main_layers.append(
+            nn.ConvTranspose2d(ngf // 8, nc, kernel_size=kernel_size, stride=stride, padding=padding, bias=False)
+        )
+        main_layers.append(nn.Tanh())  # Output values in [-1, 1]
+        
+        self.main = nn.Sequential(*main_layers)
     
     def forward(self, input):
         x = self.linear(input)
@@ -46,7 +69,7 @@ class Generator(nn.Module):
 
 def test_generator():
     device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
-    netG = Generator(nz=100, ngf=512, nc=3).to(device)
+    netG = Generator(nz=100, ngf=512, nc=3, kernel_size=4, stride=2, padding=1, dropout=0.0).to(device)
     
     # Create random noise
     noise = torch.randn(4, 100, device=device)

@@ -1,5 +1,5 @@
 # Improved Configuration for Pokemon GAN
-# Key fixes: Proper LSGAN setup, balanced model capacity, stable training
+# Key fixes: Balanced model capacity, stable training
 
 # Model architecture
 model:
@@ -7,7 +7,11 @@ model:
   ngf: 512              # Back to full capacity for generator
   ndf: 64               # Keep discriminator balanced
   nc: 3
-  use_spectral_norm: true  # Helps stabilize training
+  kernel_size: 4        # Convolution kernel size
+  stride: 2             # Stride for convolutions (generator and discriminator)
+  padding: 1            # Padding for convolutions (default: kernel_size // 2)
+  dropout_g: 0.0       # Dropout rate for generator (0.0 = disabled)
+  dropout_d: 0.0       # Dropout rate for discriminator (0.0 = disabled)
 
 # Data configuration
 data:
@@ -21,26 +25,17 @@ data:
 training:
   seed: 42
   deterministic: false
-  batch_size: 128
-  epochs: 300
+  batch_size: 64
+  epochs: 200
   
   # Asymmetric learning rates - discriminator learns faster
   lr_g: 0.0001          # Lower for generator
   lr_d: 0.0004          # 4x higher for discriminator
   beta1: 0.5
   beta2: 0.999
-  
-  # LSGAN loss with minimal smoothing
-  loss_type: bce
-  label_smoothing: 0.05   # Reduced from 0.1
+  label_smoothing: 0.2   # Reduced from 0.1
   one_sided_label_smoothing: false
-  
-  # Training dynamics
-  d_steps_per_g_step: 1
-  
-  # Disable learning rate scheduling initially
-  lr_scheduler:
-    enabled: false
+  label_flip_prob: 0.05  # Enable noisy label flipping (0.0 = disabled)
   
   # More patient early stopping
   early_stopping:

@@ -36,12 +36,21 @@ def load_model(checkpoint_path, config, device):
     netG = Generator(
         nz=config['model']['nz'],
         ngf=config['model']['ngf'],
-        nc=config['model']['nc']
+        nc=config['model']['nc'],
+        kernel_size=config['model'].get('kernel_size', 4),
+        stride=config['model'].get('stride', 2),
+        padding=config['model'].get('padding', 1),
+        dropout=config['model'].get('dropout_g', 0.0)
     ).to(device)
     
     netD = Discriminator(
         nc=config['model']['nc'],
-        ndf=config['model']['ndf']
+        ndf=config['model']['ndf'],
+        use_sigmoid=True,
+        kernel_size=config['model'].get('kernel_size', 4),
+        stride=config['model'].get('stride', 2),
+        padding=config['model'].get('padding', 1),
+        dropout=config['model'].get('dropout_d', 0.0)
     ).to(device)
     
     # Load weights
