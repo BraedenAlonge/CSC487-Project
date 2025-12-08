@@ -3,53 +3,68 @@
 
 # Model architecture
 model:
-  nz: 100
-  ngf: 512              # Back to full capacity for generator
-  ndf: 64               # Keep discriminator balanced
-  nc: 3
-  kernel_size: 4        # Convolution kernel size
-  stride: 2             # Stride for convolutions (generator and discriminator)
-  padding: 1            # Padding for convolutions (default: kernel_size // 2)
-  dropout_g: 0.0       # Dropout rate for generator (0.0 = disabled)
-  dropout_d: 0.0       # Dropout rate for discriminator (0.0 = disabled)
+  nz: 100                                         # Size of noise vector (latent space dimension) fed to generator
+  ngf: 512                                        # Number of generator filters in first conv layer (controls generator capacity)
+  ndf: 64                                         # Number of discriminator filters in first conv layer (controls discriminator capacity)
+  nc: 3                                           # Number of channels in input/output images (3 = RGB)
+  kernel_size: 4                                  # Size of convolution kernel (4x4 is standard for DCGAN)
+  stride: 2                                       # Stride for convolutions (controls downsampling/upsampling rate)
+  padding: 1                                      # Padding added to convolutions (kernel_size // 2 maintains spatial dimensions)
+  use_spectral_norm: true                         # Apply spectral normalization to discriminator (helps stabilize training)
+  dropout_g: 0.0                                  # Dropout probability for generator (0.0 = disabled)
+  dropout_d: 0.0                                  # Dropout probability for discriminator (0.0 = disabled)
+
+  # Self-attention settings
+  attention_g: true                               # Enable self-attention in generator (improves long-range dependencies)
+  attention_d: true                               # Enable self-attention in discriminator (improves long-range dependencies)
+  attention_g_layer: 32                           # Spatial size where to add attention in generator (16 or 32)
+  attention_d_layer: 32                           # Spatial size where to add attention in discriminator (16 or 32)
 
 # Data configuration
 data:
-  train_dir: "data/pokemon-dataset-1000/train"
-  val_dir: "data/pokemon-dataset-1000/val"
-  test_dir: "data/pokemon-dataset-1000/test"
-  num_workers: 4
-  augment: false
+  train_dir: "data/pokemon-dataset-1000/train"    # Directory containing training images
+  val_dir: "data/pokemon-dataset-1000/val"        # Directory containing validation images
+  test_dir: "data/pokemon-dataset-1000/test"      # Directory containing test images
+  num_workers: 4                                  # Number of parallel workers for data loading (0 = single-threaded)
+  
+  # Data augmentation settings
+  augment:
+    enabled: true                                 # Enable data augmentation
+    horizontal_flip_prob: 0.5                     # Probability of random horizontal flip (0.0-1.0)
+    vertical_flip_prob: 0.1                       # Probability of random vertical flip (0.0-1.0)
+    rotation_degrees: 5                           # Maximum rotation angle in degrees (±rotation_degrees)
 
 # Training configuration
 training:
-  seed: 42
-  deterministic: false
-  batch_size: 64
-  epochs: 200
+  seed: 42                                       # Random seed for reproducibility
+  deterministic: false                           # Enable deterministic algorithms (slower but fully reproducible)
+  batch_size: 128                                # Number of samples per training batch
+  epochs: 200                                    # Maximum number of training epochs
   
-  # Asymmetric learning rates - discriminator learns faster
-  lr_g: 0.0001          # Lower for generator
-  lr_d: 0.0004          # 4x higher for discriminator
-  beta1: 0.5
-  beta2: 0.999
-  label_smoothing: 0.2   # Reduced from 0.1
-  one_sided_label_smoothing: false
-  label_flip_prob: 0.05  # Enable noisy label flipping (0.0 = disabled)
+  # Learning rates and optimizer settings
+  lr_g: 0.0001                                   # Learning rate for generator optimizer
+  lr_d: 0.0004                                   # Learning rate for discriminator optimizer (typically 2-4x generator rate)
+  beta1: 0.5                                     # Adam optimizer beta1 parameter (momentum decay, 0.5 is standard for GANs)
+  beta2: 0.999                                   # Adam optimizer beta2 parameter (squared gradient decay)
   
-  # More patient early stopping
+  # Label smoothing and noise (helps stabilize training)
+  label_smoothing: 0.2                           # Amount to smooth labels (0.0 = hard labels, 0.2 = soft labels, prevents overconfidence)
+  one_sided_label_smoothing: false               # Only smooth real labels, keep fake labels at 0 (alternative to two-sided)
+  label_flip_prob: 0.05                          # Probability of randomly flipping labels (0.0 = disabled, adds noise to prevent overfitting)
+  
+  # Gradient clipping (prevents exploding gradients)
+  grad_clip_d: 0.0                               # Maximum gradient norm for discriminator (0.0 = disabled, >0 clips gradients)
+  grad_clip_g: 0.0                               # Maximum gradient norm for generator (0.0 = disabled, >0 clips gradients)
+  
+  # Early stopping (stops training if no improvement)
   early_stopping:
-    enabled: true
-    patience: 50          # Very patient
-    min_delta: 0.5        # Smaller threshold
+    enabled: true                                # Enable early stopping in training
+    patience: 20                                 # Number of epochs to wait without improvement before stopping
+    min_delta: 1.0                               # Minimum change in FID to qualify as improvement
   
-  # Logging
-  log_interval: 50
-  save_interval: 10
-  checkpoint_interval: 25
-  val_samples: 64
-  
-  checkpoint_dir: "checkpoints"
-  output_dir: "outputs"
-  log_dir: "logs"
-
+  # Logging and output settings
+  log_interval: 10                               # Print training stats every N batches
+  val_samples: 64                                # Number of validation samples to generate for visualization and FID calculation
+  checkpoint_dir: "checkpoints"                  # Directory to save model checkpoints
+  output_dir: "outputs"                          # Directory to save generated images and visualizations
+  log_dir: "logs"                                # Directory to save TensorBoard logs

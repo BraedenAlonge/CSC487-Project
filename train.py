@@ -35,17 +35,21 @@ def create_models(config, device):
         kernel_size=config['model'].get('kernel_size', 4),
         stride=config['model'].get('stride', 2),
         padding=config['model'].get('padding', 1),
-        dropout=config['model'].get('dropout_g', 0.0)
+        dropout=config['model'].get('dropout_g', 0.0),
+        attention=config['model'].get('attention_g', False),
+        attention_layer=config['model'].get('attention_g_layer', 32)
     ).to(device)
     
     netD = Discriminator(
         nc=config['model']['nc'],
         ndf=config['model']['ndf'],
-        use_sigmoid=True,
         kernel_size=config['model'].get('kernel_size', 4),
         stride=config['model'].get('stride', 2),
         padding=config['model'].get('padding', 1),
-        dropout=config['model'].get('dropout_d', 0.0)
+        dropout=config['model'].get('dropout_d', 0.0),
+        use_spectral_norm=config['model'].get('use_spectral_norm', False),
+        attention=config['model'].get('attention_d', False),
+        attention_layer=config['model'].get('attention_d_layer', 32)
     ).to(device)
     
     # Initialize weights
@@ -66,11 +70,16 @@ def create_models(config, device):
     return netG, netD
 
 def create_dataloaders(config):
+    # Get augmentation config
+    aug_config = config['data'].get('augment', {})
+    augment_enabled = aug_config.get('enabled', False)
+    
     if 'val_dir' in config['data'] and config['data']['val_dir'] is not None:
         # Use separate directories for train and validation
         train_dataset = PokemonDataset(
             root_dir=config['data']['train_dir'],
-            augment=config['data']['augment']
+            augment=augment_enabled,
+            aug_config=aug_config
         )
         val_dataset = PokemonDataset(
             root_dir=config['data']['val_dir'],
@@ -183,8 +192,8 @@ def train_epoch(netG, netD, train_loader, criterion, optimizerG, optimizerD,
         errD = errD_real + errD_fake
         
         # Gradient clipping for discriminator (if enabled)
-        if grad_clip_d is not None:
-            torch.nn.utils.clip_grad_norm_(netD.parameters(), float(grad_clip_d))
+        if grad_clip_d > 0.0:
+            torch.nn.utils.clip_grad_norm_(netD.parameters(), grad_clip_d)
         
         optimizerD.step()
         
@@ -197,8 +206,8 @@ def train_epoch(netG, netD, train_loader, criterion, optimizerG, optimizerD,
         errG.backward()
         
         # Gradient clipping for generator (if enabled)
-        if grad_clip_g is not None:
-            torch.nn.utils.clip_grad_norm_(netG.parameters(), float(grad_clip_g))
+        if grad_clip_g > 0.0:
+            torch.nn.utils.clip_grad_norm_(netG.parameters(), grad_clip_g)
         
         D_G_z2 = output.mean().item()
         optimizerG.step()
@@ -386,26 +395,20 @@ def main():
         writer.add_scalar('Val/Loss_G', val_metrics['g_loss'], epoch)
         writer.add_scalar('Val/FID', fid, epoch)
         
-        # Save sample images and checkpoints
-        if epoch % config['training']['save_interval'] == 0:
-            save_image_grid(val_metrics['fake_samples'], 
-                          os.path.join(config['training']['output_dir'], f'epoch_{epoch}_fake.png'))
-            save_image_grid(val_metrics['real_samples'], 
-                          os.path.join(config['training']['output_dir'], f'epoch_{epoch}_real.png'))        
-        if epoch % config['training']['checkpoint_interval'] == 0:
-            checkpoint_path = os.path.join(config['training']['checkpoint_dir'], 
-                                         f'checkpoint_epoch_{epoch}.pt')
-            save_checkpoint(netG, netD, optimizerG, optimizerD, epoch, 
-                          {'best_fid': best_fid}, config, checkpoint_path)
-        
         # Save best model and check for early stopping
         if fid < best_fid - early_stopping_min_delta:
             best_fid = fid
             epochs_without_improvement = 0
-            best_path = os.path.join(config['training']['checkpoint_dir'], 'best_model.pt')
+            best_path = os.path.join(config['training']['checkpoint_dir'], f'best_model_epoch_{epoch}.pt')
             save_checkpoint(netG, netD, optimizerG, optimizerD, epoch, 
                           {'best_fid': best_fid}, config, best_path)
-            print(f"New best FID: {best_fid:.4f}")
+            print(f"New best FID: {best_fid:.4f} at epoch {epoch}")
+            
+            # Save sample images when model improves
+            save_image_grid(val_metrics['fake_samples'], 
+                          os.path.join(config['training']['output_dir'], f'epoch_{epoch}_fake.png'))
+            save_image_grid(val_metrics['real_samples'], 
+                          os.path.join(config['training']['output_dir'], f'epoch_{epoch}_real.png'))
         else:
             epochs_without_improvement += 1
         
@@ -415,15 +418,19 @@ def main():
             print(f"Best FID: {best_fid:.4f} at epoch {epoch - epochs_without_improvement}")
             break
     
-    # Save final model
-    final_path = os.path.join(config['training']['checkpoint_dir'], 'final_model.pt')
-    save_checkpoint(netG, netD, optimizerG, optimizerD, config['training']['epochs'] - 1,
+    # Save final model (epoch variable is available after loop)
+    final_path = os.path.join(config['training']['checkpoint_dir'], f'final_model_epoch_{epoch}.pt')
+    save_checkpoint(netG, netD, optimizerG, optimizerD, epoch,
                    {'best_fid': best_fid}, config, final_path)
     
-    # Also save as baseline.pt for reproducibility requirement
-    baseline_path = os.path.join(config['training']['checkpoint_dir'], 'baseline.pt')
-    save_checkpoint(netG, netD, optimizerG, optimizerD, config['training']['epochs'] - 1,
-                   {'best_fid': best_fid}, config, baseline_path)
+    # Save sample images for final model
+    # Get final validation samples
+    val_metrics = validate(netG, netD, val_loader, criterion, device, config)
+    save_image_grid(val_metrics['fake_samples'], 
+                  os.path.join(config['training']['output_dir'], f'epoch_{epoch}_final_fake.png'))
+    save_image_grid(val_metrics['real_samples'], 
+                  os.path.join(config['training']['output_dir'], f'epoch_{epoch}_final_real.png'))
+
     
     # plot training curves
     plot_training_curves(

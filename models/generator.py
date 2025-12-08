@@ -1,8 +1,10 @@
 import torch
 import torch.nn as nn
+from .attention import SelfAttention
 
 class Generator(nn.Module):
-    def __init__(self, nz=100, ngf=512, nc=3, kernel_size=4, stride=2, padding=1, dropout=0.0):
+    def __init__(self, nz=100, ngf=512, nc=3, kernel_size=4, stride=2, padding=1, dropout=0.0,
+                 attention=False, attention_layer=32):
         super(Generator, self).__init__()
         self.nz = nz
         self.ngf = ngf
@@ -11,6 +13,8 @@ class Generator(nn.Module):
         self.stride = stride
         self.padding = padding
         self.dropout = dropout
+        self.attention = attention
+        self.attention_layer = attention_layer
         
         # Linear layer: 100 -> 4×4×512
         linear_layers = [
@@ -22,54 +26,80 @@ class Generator(nn.Module):
             linear_layers.append(nn.Dropout(dropout))
         self.linear = nn.Sequential(*linear_layers)
         
-        # Transpose convolution layers
-        main_layers = []
-        
         # TransposeConv2d: 4×4×512 → 8×8×256
-        main_layers.append(
-            nn.ConvTranspose2d(ngf, ngf // 2, kernel_size=kernel_size, stride=stride, padding=padding, bias=False)
-        )
-        main_layers.append(nn.BatchNorm2d(ngf // 2))
-        if dropout > 0:
-            main_layers.append(nn.Dropout2d(dropout))
-        main_layers.append(nn.ReLU(True))
+        self.conv1 = nn.ConvTranspose2d(ngf, ngf // 2, kernel_size=kernel_size, stride=stride, padding=padding, bias=False)
+        self.bn1 = nn.BatchNorm2d(ngf // 2)
+        self.relu1 = nn.ReLU(True)
         
         # TransposeConv2d: 8×8×256 → 16×16×128
-        main_layers.append(
-            nn.ConvTranspose2d(ngf // 2, ngf // 4, kernel_size=kernel_size, stride=stride, padding=padding, bias=False)
-        )
-        main_layers.append(nn.BatchNorm2d(ngf // 4))
-        if dropout > 0:
-            main_layers.append(nn.Dropout2d(dropout))
-        main_layers.append(nn.ReLU(True))
+        self.conv2 = nn.ConvTranspose2d(ngf // 2, ngf // 4, kernel_size=kernel_size, stride=stride, padding=padding, bias=False)
+        self.bn2 = nn.BatchNorm2d(ngf // 4)
+        self.relu2 = nn.ReLU(True)
+        
+        # Attention at 16×16 if enabled
+        if attention and attention_layer == 16:
+            self.attention_16 = SelfAttention(ngf // 4)
+        else:
+            self.attention_16 = None
         
         # TransposeConv2d: 16×16×128 → 32×32×64
-        main_layers.append(
-            nn.ConvTranspose2d(ngf // 4, ngf // 8, kernel_size=kernel_size, stride=stride, padding=padding, bias=False)
-        )
-        main_layers.append(nn.BatchNorm2d(ngf // 8))
-        if dropout > 0:
-            main_layers.append(nn.Dropout2d(dropout))
-        main_layers.append(nn.ReLU(True))
+        self.conv3 = nn.ConvTranspose2d(ngf // 4, ngf // 8, kernel_size=kernel_size, stride=stride, padding=padding, bias=False)
+        self.bn3 = nn.BatchNorm2d(ngf // 8)
+        self.relu3 = nn.ReLU(True)
+        
+        # Attention at 32×32 if enabled
+        if attention and attention_layer == 32:
+            self.attention_32 = SelfAttention(ngf // 8)
+        else:
+            self.attention_32 = None
         
         # TransposeConv2d: 32×32×64 → 64×64×3
-        main_layers.append(
-            nn.ConvTranspose2d(ngf // 8, nc, kernel_size=kernel_size, stride=stride, padding=padding, bias=False)
-        )
-        main_layers.append(nn.Tanh())  # Output values in [-1, 1]
-        
-        self.main = nn.Sequential(*main_layers)
+        self.conv4 = nn.ConvTranspose2d(ngf // 8, nc, kernel_size=kernel_size, stride=stride, padding=padding, bias=False)
+        self.tanh = nn.Tanh()
     
     def forward(self, input):
         x = self.linear(input)
         x = x.view(-1, self.ngf, 4, 4)  # Reshape to (batch, 512, 4, 4)
-        x = self.main(x)
+        
+        # 4×4×512 → 8×8×256
+        x = self.conv1(x)
+        x = self.bn1(x)
+        if self.dropout > 0:
+            x = nn.functional.dropout2d(x, p=self.dropout, training=self.training)
+        x = self.relu1(x)
+        
+        # 8×8×256 → 16×16×128
+        x = self.conv2(x)
+        x = self.bn2(x)
+        if self.dropout > 0:
+            x = nn.functional.dropout2d(x, p=self.dropout, training=self.training)
+        x = self.relu2(x)
+        
+        # Attention at 16×16
+        if self.attention_16 is not None:
+            x = self.attention_16(x)
+        
+        # 16×16×128 → 32×32×64
+        x = self.conv3(x)
+        x = self.bn3(x)
+        if self.dropout > 0:
+            x = nn.functional.dropout2d(x, p=self.dropout, training=self.training)
+        x = self.relu3(x)
+        
+        # Attention at 32×32
+        if self.attention_32 is not None:
+            x = self.attention_32(x)
+        
+        # 32×32×64 → 64×64×3
+        x = self.conv4(x)
+        x = self.tanh(x)
         
         return x
 
 def test_generator():
     device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
-    netG = Generator(nz=100, ngf=512, nc=3, kernel_size=4, stride=2, padding=1, dropout=0.0).to(device)
+    netG = Generator(nz=100, ngf=512, nc=3, kernel_size=4, stride=2, padding=1, dropout=0.0,
+                     attention=False, attention_layer=32).to(device)
     
     # Create random noise
     noise = torch.randn(4, 100, device=device)

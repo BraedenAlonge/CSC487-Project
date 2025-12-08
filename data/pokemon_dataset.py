@@ -5,9 +5,10 @@ from torch.utils.data import Dataset
 from torchvision import transforms
 
 class PokemonDataset(Dataset):    
-    def __init__(self, root_dir, transform=None, augment=False):
+    def __init__(self, root_dir, transform=None, augment=False, aug_config=None):
         self.root_dir = root_dir
         self.image_paths = []
+        self.aug_config = aug_config or {}
         
         # Collect all image paths
         for root, dirs, files in os.walk(root_dir):
@@ -27,11 +28,15 @@ class PokemonDataset(Dataset):
         
         # Add augmentation if requested
         if augment:
-            # Hardcoded augmentation settings
+            # Get augmentation parameters from config
+            hflip_prob = self.aug_config.get('horizontal_flip_prob', 0.5)
+            vflip_prob = self.aug_config.get('vertical_flip_prob', 0.5)
+            rotation_deg = self.aug_config.get('rotation_degrees', 5)
+            
             aug_transforms = [
-                transforms.RandomHorizontalFlip(p=0.5),
-                transforms.RandomRotation(degrees=5),  # Small rotations
-                transforms.RandomAffine(degrees=0, translate=(0.05, 0.05), scale=(0.95, 1.05))
+                transforms.RandomHorizontalFlip(p=hflip_prob),
+                transforms.RandomVerticalFlip(p=vflip_prob),
+                transforms.RandomRotation(degrees=rotation_deg),
             ]
             
             self.transform = transforms.Compose(aug_transforms + base_transforms)
