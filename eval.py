@@ -65,8 +65,6 @@ def load_model(checkpoint_path, config, device):
     netD.eval()
     
     print(f"Loaded model from epoch {checkpoint.get('epoch', 'unknown')}")
-    if 'metrics' in checkpoint:
-        print(f"Best FID: {checkpoint['metrics'].get('best_fid', 'N/A')}")
     
     return netG, netD
 
@@ -85,8 +83,6 @@ def generate_samples(netG, n_samples, nz, device, batch_size=64):
     return fake_images
 
 def evaluate_discriminator(netD, real_images, fake_images, device):
-    print("Evaluating discriminator...")
-    
     real_scores = []
     fake_scores = []
     
@@ -146,29 +142,28 @@ def main():
     print("Saving sample images...")
     save_image_grid(real_images[:64], os.path.join(args.output_dir, 'real_eval_samples.png'))
     save_image_grid(fake_images[:64], os.path.join(args.output_dir, 'fake_eval_samples.png'))
-    
-    print("\n" + "="*50)
-    print("EVALUATION RESULTS")
-    print("="*50)
 
     # Calculate metrics
-    print("\nCalculating metrics...")
+    print("Calculating metrics...")
     fid = calculate_fid(real_images.to(device), fake_images.to(device), device=device)    
     is_mean, is_std = calculate_inception_score(fake_images.to(device), device=device)
     diversity = calculate_diversity_score(fake_images.to(device), device=device)
-    print("\nMetrics:")
+    print("Metrics:")
     print(f"  FID: {fid:.4f} (lower is better)")
     print(f"  Inception Score: {is_mean:.4f} ± {is_std:.4f} (higher is better)")
     print(f"  Diversity Score: {diversity:.4f} (higher is better)")
 
     # Discriminator evaluation
-    print("\nEvaluating discriminator...")
+    print("Evaluating discriminator...")
     real_scores, fake_scores = evaluate_discriminator(netD, real_images, fake_images, device)
-    print(f"\nDiscriminator Statistics:")
+    print(f"Discriminator Stats:")
     print(f"  Real images - Mean score: {real_scores.mean().item():.4f}, "
           f"Std: {real_scores.std().item():.4f}")
     print(f"  Fake images - Mean score: {fake_scores.mean().item():.4f}, "
           f"Std: {fake_scores.std().item():.4f}")
+
+    # Discriminator accuracy
+    print("Plotting confusion matrix...")
     plot_confusion_matrix(real_scores, fake_scores, 
                         save_path=os.path.join(args.output_dir, 'confusion_matrix_eval.png'))
 

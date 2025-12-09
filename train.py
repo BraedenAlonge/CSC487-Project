@@ -151,7 +151,10 @@ def train_epoch(netG, netD, train_loader, criterion, optimizerG, optimizerD,
         else:
             # No smoothing (hard labels)
             label_real_d = torch.full((batch_size, 1), 1.0, device=device)
-            label_real_g = torch.full((batch_size, 1), 1.0, device=device)
+            label_fake_d = torch.zeros(batch_size, 1, device=device)
+        
+        # Generator always tries to fool discriminator
+        label_real_g = torch.full((batch_size, 1), 1.0, device=device)
         
         # randomly flip labels with specified probability
         if label_flip_prob > 0.0:
@@ -397,7 +400,7 @@ def main():
         if fid < best_fid - early_stopping_min_delta:
             best_fid = fid
             epochs_without_improvement = 0
-            best_path = os.path.join(config['training']['checkpoint_dir'], f'best_model_epoch_{epoch}.pt')
+            best_path = os.path.join(config['training']['checkpoint_dir'], f'epoch_{epoch}_model_best.pt')
             save_checkpoint(netG, netD, optimizerG, optimizerD, epoch, 
                           {'best_fid': best_fid}, config, best_path)
             print(f"New best FID: {best_fid:.4f} at epoch {epoch}")
@@ -417,7 +420,7 @@ def main():
             break
     
     # Save final model (epoch variable is available after loop)
-    final_path = os.path.join(config['training']['checkpoint_dir'], f'final_model_epoch_{epoch}.pt')
+    final_path = os.path.join(config['training']['checkpoint_dir'], f'epoch_{epoch}_model_final.pt')
     save_checkpoint(netG, netD, optimizerG, optimizerD, epoch,
                    {'best_fid': best_fid}, config, final_path)
     
@@ -425,9 +428,9 @@ def main():
     # Get final validation samples
     val_metrics = validate(netG, netD, val_loader, criterion, device, config)
     save_image_grid(val_metrics['fake_samples'], 
-                  os.path.join(config['training']['output_dir'], f'epoch_{epoch}_final_fake.png'))
+                  os.path.join(config['training']['output_dir'], f'epoch_{epoch}_fake_final.png'))
     save_image_grid(val_metrics['real_samples'], 
-                  os.path.join(config['training']['output_dir'], f'epoch_{epoch}_final_real.png'))
+                  os.path.join(config['training']['output_dir'], f'epoch_{epoch}_real_final.png'))
 
     
     # plot training curves

@@ -27,7 +27,6 @@ CSC487-Project/
 │   ├── final.yaml          # Final model configuration
 ├── train.py                # Training script
 ├── eval.py                 # Evaluation script
-├── test_setup.py           # Setup verification script
 ├── train_colab.ipynb       # Google Colab training notebook
 ├── requirements.txt        # Python dependencies
 └── README.md               # This file
