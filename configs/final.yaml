@@ -62,7 +62,7 @@ training:
     min_delta: 1.0                               # Minimum change in FID to qualify as improvement
   
   # Logging and output settings
-  log_interval: 10                               # Print training stats every N batches
+  log_interval: 50                               # Print training stats every N batches
   val_samples: 64                                # Number of validation samples to generate for visualization and FID calculation
   checkpoint_dir: "checkpoints"                  # Directory to save model checkpoints
   output_dir: "outputs"                          # Directory to save generated images and visualizations
