@@ -33,17 +33,17 @@ ENV/
 
 # Data
 *.zip
-*.png
-*.jpg
-*.jpeg
-*.gif
-*.csv
+#*.png
+#*.jpg
+#*.jpeg
+#*.gif
+#*.csv
 
 # Outputs
-outputs/
-checkpoints/
-logs/
-eval_outputs/
+#outputs/
+#checkpoints/
+#logs/
+#eval_outputs/
 
 
 # IDE
